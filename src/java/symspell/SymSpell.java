@@ -133,7 +133,7 @@ public class SymSpell {
         return lookup(input, verbosity, false);
     }
 
-    private List<SuggestItem> lookup(String input, Verbosity verbosity, int maxEditDistance, boolean includeUnknown) throws RuntimeException {
+    public List<SuggestItem> lookup(String input, Verbosity verbosity, int maxEditDistance, boolean includeUnknown) throws RuntimeException {
         if (maxEditDistance > maxDictionaryEditDistance) {
             throw new IllegalArgumentException("maxEditDistance > maxDictionaryEditDistance");
         }
