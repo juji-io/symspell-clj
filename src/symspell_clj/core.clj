@@ -2,20 +2,39 @@
   "SymSpell Spell checker"
   (:require [clojure.java.io :as io]
             [clojure.string :as s])
-  (:import [symspell Bigram SymSpell Verbosity SuggestItem
-            DamerauLevenshteinOSA]
+  (:import [symspell Bigram SymSpell Verbosity SuggestItem]
            [java.util.concurrent ConcurrentHashMap]))
 
+(defn- add-to-trie
+  [trie s]
+  (assoc-in trie s (merge (get-in trie s) {:end true})))
+
+(defn- match-prefix
+  [trie s]
+  (when-not (s/blank? s)
+    (loop [t trie ks (seq s)]
+      (if ks
+        (let [k (first ks)]
+          (if-let [t (t k)]
+            (recur t (next ks))
+            false))
+        true))))
+
 (defprotocol ISpellChecker
-  (suggest [this tokens distance-threshold] "return suggested terms"))
+  (match-prefix? [this input] "return true if input matches a prefix in dictionary")
+  (suggest [this input distance-threshold] "return suggested terms"))
 
 (deftype SpellChecker [^SymSpell symspell
+                       prefix-trie
                        unigram-file
                        bigram-file]
   ISpellChecker
+  (match-prefix? [_ input]
+    (match-prefix prefix-trie input))
   (suggest [_ input distance-threshold]
-    (.lookup symspell input Verbosity/ALL false)
-    ;; (.lookupCompound symspell input distance-threshold false)
+    ;; (.lookup symspell input Verbosity/ALL false)
+    ;; (.lookup symspell input Verbosity/CLOSEST false)
+    (.lookupCompound symspell input distance-threshold false)
     ))
 
 (defn- read-unigram
@@ -50,18 +69,23 @@
                                      prefix-length]
                               :or   {max-edit-distance 2
                                      prefix-length     10}}]
-   (->SpellChecker
-     (SymSpell. (read-unigram unigram-file)
-                (read-bigram bigram-file)
-                max-edit-distance
-                prefix-length)
-     unigram-file
-     bigram-file)))
+   (let [unigram (read-unigram unigram-file)]
+     (->SpellChecker
+       (SymSpell. unigram
+                  (read-bigram bigram-file)
+                  max-edit-distance
+                  prefix-length)
+       (reduce add-to-trie {} (.keySet unigram))
+       unigram-file
+       bigram-file))))
 
 (comment
 
   (def sc (time (new-spellchecker)))
-  (suggest sc "hel" 2)
+
+  (time (suggest sc "hel" 2))
+  (time (suggest sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him" 2))
+
   (def sm (.-symspell sc))
   (.size (.getDeletes sm))
   (.size (.getUnigramLexicon sm))
