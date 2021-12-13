@@ -28,7 +28,7 @@
      are:
      * `:verbosity`, a keyword value, with possible values:
         - `:all`, return all possible suggestions
-        - `:closest`, return the closest suggestion
+        - `:closest`, return the closest (w/ minimal edit distance) suggestions
         - `:top`, return the top suggestion
      * `:threshold`, edit distance threshold, default is 2. This must be no larger
        than `max-edit-distance` of the spell checker
@@ -57,16 +57,30 @@
                     :or   {verbosity        :closest
                            threshold        2
                            include-unknown? false}}]
-    (let [input (s/lower-case input)]
-      (.lookup symspell input (key->verbosity verbosity) threshold
-               include-unknown?)))
+    (let [capitalized? (Character/isUpperCase (first input))
+          all-cap?     (every? #(Character/isUpperCase %) input)
+          input        (s/lower-case input)]
+      (sequence (comp
+                  (map (fn [^SuggestItem si]
+                         [(let [suggestion (.getSuggestion si)]
+                            (cond
+                              all-cap?     (s/upper-case suggestion)
+                              capitalized? (s/capitalize suggestion)
+                              :else        suggestion))
+                          (.getEditDistance si)]))
+                  (dedupe))
+                (.lookup symspell input (key->verbosity verbosity) threshold
+                         include-unknown?))))
 
   (lookup-compound [this input]
     (.lookup-compound this input {}))
   (lookup-compound [_ input {:keys [threshold include-unknown?]
                              :or   {threshold        2
                                     include-unknown? false}}]
-    (.lookupCompound symspell input threshold include-unknown?)))
+    (map (fn [^SuggestItem si]
+           [(.getSuggestion si) (.getEditDistance si)])
+         (.lookupCompound symspell (s/lower-case input) threshold
+                          include-unknown?))))
 
 (defn- read-unigram
   [file]
@@ -121,9 +135,9 @@
 
   (def sc (time (new-spellchecker)))
 
-  (time (lookup sc "Hel"))
-  (time (lookup sc "Hel" {:verbosity :all}))
-  (time (lookup sc "Hel" {:verbosity :top}))
+  (count (time (lookup sc "xel")))
+  (count (time (lookup sc "xel" {:verbosity :all})))
+  (count (time (lookup sc "xel" {:verbosity :top})))
   (time (lookup-compound sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him"))
 
   (def sm (.-symspell sc))
@@ -132,14 +146,5 @@
   (.size (.getBigramLexicon sm))
 
 
-  (def ug (.getUnigramLexicon sm))
-
-  (.lookup sm "hel" Verbosity/ALL 2 false)
-
-  (.containsKey ug "hel")
-
-  (def ed (DamerauLevenshteinOSA.))
-
-  (.distanceWithEarlyStop ed "hel" "hello" 2)
 
   )
