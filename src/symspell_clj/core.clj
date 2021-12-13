@@ -21,8 +21,27 @@
         true))))
 
 (defprotocol ISpellChecker
-  (match-prefix? [this input] "return true if input matches a prefix in dictionary")
-  (suggest [this input distance-threshold] "return suggested terms"))
+  (match-prefix? [this input]
+    "Return true if the input matches a prefix in the dictionary")
+  (lookup [this input] [this input opts]
+    "Return suggested terms for a single word input. Possible option map keys
+     are:
+     * `:verbosity`, a keyword value, with possible values:
+        - `:all`, return all possible suggestions
+        - `:closest`, return the closest suggestion
+        - `:top`, return the top suggestion
+     * `:threshold`, edit distance threshold, default is 2. This must be no larger
+       than `max-edit-distance` of the spell checker
+     * `:include-unknown?`, whether to include unknown word in suggestion")
+  (lookup-compound [this input] [this input opts]
+    "Return suggestions for multi-word input. Option may keys include:
+     * `:threshold`, edit distance threshold per word, default is 2. This must be
+       no larger than `max-edit-distance` of the spell checker
+     * `:include-unknown?`, whether to include unknown word in suggestion"))
+
+(def key->verbosity {:all     Verbosity/ALL
+                     :closest Verbosity/CLOSEST
+                     :top     Verbosity/TOP})
 
 (deftype SpellChecker [^SymSpell symspell
                        prefix-trie
@@ -31,16 +50,25 @@
   ISpellChecker
   (match-prefix? [_ input]
     (match-prefix prefix-trie input))
-  (suggest [_ input distance-threshold]
-    ;; (.lookup symspell input Verbosity/ALL false)
-    ;; (.lookup symspell input Verbosity/CLOSEST false)
-    (.lookupCompound symspell input distance-threshold false)
-    ))
+
+  (lookup [this input]
+    (.lookup this input {}))
+  (lookup [_ input {:keys [verbosity threshold include-unknown?]
+                    :or   {verbosity        :closest
+                           threshold        2
+                           include-unknown? false}}]
+    (let [input (s/lower-case input)]
+      (.lookup symspell input (key->verbosity verbosity) threshold
+               include-unknown?)))
+
+  (lookup-compound [this input]
+    (.lookup-compound this input {}))
+  (lookup-compound [_ input {:keys [threshold include-unknown?]
+                             :or   {threshold        2
+                                    include-unknown? false}}]
+    (.lookupCompound symspell input threshold include-unknown?)))
 
 (defn- read-unigram
-  "unigram file is relative to the classpath. The file should be plain text,
-  without BOM. Each line contains a word, a space, then followed by its
-  frequency"
   [file]
   (let [m (ConcurrentHashMap.)]
     (with-open [rdr (io/reader (io/resource file))]
@@ -59,6 +87,16 @@
     m))
 
 (defn new-spellchecker
+  "Create a spell checker.
+   Unigram file is relative to the classpath. The file should be plain text,
+   UTF-8 encoded without BOM. Each line contains a word and its frequency with a
+   space in between. The default file is a built-in English dictionary.
+   Bigram file is similar, but with two words instead. This file is optional.
+   Possible option map keys are
+   * `:max-edit-distance` is the maximum possible edit distance considered by
+    this spell checker, default 2.
+   * `:prefix-length` is the length of prefix considered by this spell checker,
+    default 10."
   ([]
    (new-spellchecker "en_unigrams.txt" "en_bigrams.txt" {}))
   ([unigram-file]
@@ -83,8 +121,10 @@
 
   (def sc (time (new-spellchecker)))
 
-  (time (suggest sc "hel" 2))
-  (time (suggest sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him" 2))
+  (time (lookup sc "Hel"))
+  (time (lookup sc "Hel" {:verbosity :all}))
+  (time (lookup sc "Hel" {:verbosity :top}))
+  (time (lookup-compound sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him"))
 
   (def sm (.-symspell sc))
   (.size (.getDeletes sm))
