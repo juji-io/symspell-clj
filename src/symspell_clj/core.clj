@@ -60,27 +60,29 @@
     (let [capitalized? (Character/isUpperCase (first input))
           all-cap?     (every? #(Character/isUpperCase %) input)
           input        (s/lower-case input)]
-      (sequence (comp
-                  (map (fn [^SuggestItem si]
-                         [(let [suggestion (.getSuggestion si)]
-                            (cond
-                              all-cap?     (s/upper-case suggestion)
-                              capitalized? (s/capitalize suggestion)
-                              :else        suggestion))
-                          (.getEditDistance si)]))
-                  (dedupe))
-                (.lookup symspell input (key->verbosity verbosity) threshold
-                         include-unknown?))))
+      (doall
+        (sequence (comp
+                    (map (fn [^SuggestItem si]
+                           [(let [suggestion (.getSuggestion si)]
+                              (cond
+                                all-cap?     (s/upper-case suggestion)
+                                capitalized? (s/capitalize suggestion)
+                                :else        suggestion))
+                            (.getEditDistance si)]))
+                    (dedupe))
+                  (.lookup symspell input (key->verbosity verbosity) threshold
+                           include-unknown?)))))
 
   (lookup-compound [this input]
     (.lookup-compound this input {}))
   (lookup-compound [_ input {:keys [threshold include-unknown?]
                              :or   {threshold        2
                                     include-unknown? false}}]
-    (map (fn [^SuggestItem si]
-           [(.getSuggestion si) (.getEditDistance si)])
-         (.lookupCompound symspell (s/lower-case input) threshold
-                          include-unknown?))))
+    (doall
+      (map (fn [^SuggestItem si]
+             [(.getSuggestion si) (.getEditDistance si)])
+           (.lookupCompound symspell (s/lower-case input) threshold
+                            include-unknown?)))))
 
 (defn- read-unigram
   [file]
