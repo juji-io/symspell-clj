@@ -42,5 +42,8 @@
            [["what is fuji" 2]]))
     (sut/add-word sc "juji")
     (is (= (sut/lookup-compound sc "wht is juji")
-           [["what is juji" 1]]))
-    ))
+           [["what is juji" 1]]))))
+
+(deftest custom-dict-test
+  (let [sc (sut/new-spellchecker nil nil {:custom-dictionary ["juji"]})]
+    (is (= (sut/lookup sc "juji") [["juji" 0]]))))

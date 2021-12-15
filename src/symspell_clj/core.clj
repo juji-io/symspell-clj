@@ -142,7 +142,9 @@
                               :or   {max-edit-distance 2
                                      prefix-length     10
                                      custom-dictionary []}}]
-   (let [unigram (read-unigram unigram-file)]
+   (let [unigram-file (or unigram-file "en_unigrams.txt")
+         bigram-file  (or bigram-file "en_bigrams.txt")
+         unigram      (read-unigram unigram-file)]
      (doseq [w custom-dictionary]
        (.put unigram w custom-word-default-freq))
      (->SpellChecker
