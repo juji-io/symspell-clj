@@ -1,4 +1,4 @@
-(def version "0.2.1")
+(def version "0.2.2")
 
 (defproject org.clojars.huahaiy/symspell-clj version
   :description "SymSpell in Clojure"
