@@ -4,6 +4,8 @@ SymSpell spell checker in Clojure.
 
 This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSpell](https://github.com/wolfgarbe/SymSpell) spell checker.
 
+Currently it supports English only.
+
 ## Usage
 
 ```clojure
@@ -11,7 +13,7 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 
 (def sc (sp/new-spellchecker))
 
-;; spell checking individual word, return suggestions and corresponding edit distance
+;; spell checking individual word, return suggestions and corresponding edit distances
 (sp/lookup sc "wht")
 ;;==> (["what" 1] ["whit" 1] ["whet" 1])
 
@@ -20,3 +22,7 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 ;;==> (["where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him" 10])
 
 ```
+
+## Documentation
+
+Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.2.3/api/symspell-clj.core)

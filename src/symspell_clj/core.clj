@@ -44,11 +44,11 @@
        no larger than `max-edit-distance` of the spell checker
      * `:include-unknown?`, whether to include unknown word in suggestion"))
 
-(def key->verbosity {:all     Verbosity/ALL
-                     :closest Verbosity/CLOSEST
-                     :top     Verbosity/TOP})
+(def ^:no-doc key->verbosity {:all     Verbosity/ALL
+                              :closest Verbosity/CLOSEST
+                              :top     Verbosity/TOP})
 
-(def custom-word-default-freq 300000)
+(def ^:no-doc custom-word-default-freq 300000)
 
 (defn- normalize-suggestion
   [all-cap? capitalized?]
