@@ -26,9 +26,21 @@
     (is (= (count (sut/lookup sc "xel")) 9))
     (is (= (count (sut/lookup sc "xel" {:verbosity :all})) 334))
     (is (= (take 9 (sut/lookup sc "xel" {:verbosity :top}))
-           (sut/lookup sc "xel")))))
+           (sut/lookup sc "xel")))
+
+    (is (= (sut/lookup sc "juji") [["fuji" 1]]))
+    (sut/add-word sc "juji")
+    (is (= (sut/lookup sc "juji") [["juji" 0]]))
+    ))
 
 (deftest lookup-compound-test
   (let [sc (sut/new-spellchecker)]
     (is (= (sut/lookup-compound sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him")
-           [["where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him" 10]]))))
+           [["where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him" 10]]))
+
+    (is (= (sut/lookup-compound sc "wht is juji")
+           [["what is fuji" 2]]))
+    (sut/add-word sc "juji")
+    (is (= (sut/lookup-compound sc "wht is juji")
+           [["what is juji" 1]]))
+    ))

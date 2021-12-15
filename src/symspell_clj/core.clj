@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as s])
   (:import [symspell Bigram SymSpell Verbosity SuggestItem]
+           [java.util HashMap]
            [java.util.concurrent ConcurrentHashMap]))
 
 (defn- add-to-trie
@@ -21,6 +22,10 @@
         true))))
 
 (defprotocol ISpellChecker
+  (add-word [this word]
+    "Add a word to the spell checker at run time. It is responsibility of user
+     to persist the added words, pass them to `:customer-dictionary` when the
+     spellchcker is initialized next time.")
   (match-prefix? [this input]
     "Return true if the input matches a prefix in the dictionary")
   (lookup [this input] [this input opts]
@@ -43,11 +48,27 @@
                      :closest Verbosity/CLOSEST
                      :top     Verbosity/TOP})
 
+(def custom-word-default-freq 300000)
+
+(defn- normalize-suggestion
+  [all-cap? capitalized?]
+  (fn [^SuggestItem si]
+    [(let [suggestion (.getSuggestion si)]
+       (cond
+         all-cap?     (s/upper-case suggestion)
+         capitalized? (s/capitalize suggestion)
+         :else        suggestion))
+     (.getEditDistance si)]))
+
 (deftype SpellChecker [^SymSpell symspell
-                       prefix-trie
-                       unigram-file
-                       bigram-file]
+                       ^:volatile-mutable prefix-trie]
   ISpellChecker
+  (add-word [_ word]
+    (let [word (s/lower-case word)]
+      (set! prefix-trie (add-to-trie prefix-trie word))
+      (.addUnigrams symspell (doto (HashMap.)
+                               (.put word custom-word-default-freq)))))
+
   (match-prefix? [_ input]
     (match-prefix prefix-trie input))
 
@@ -62,13 +83,7 @@
           input        (s/lower-case input)]
       (doall
         (sequence (comp
-                    (map (fn [^SuggestItem si]
-                           [(let [suggestion (.getSuggestion si)]
-                              (cond
-                                all-cap?     (s/upper-case suggestion)
-                                capitalized? (s/capitalize suggestion)
-                                :else        suggestion))
-                            (.getEditDistance si)]))
+                    (map (normalize-suggestion all-cap? capitalized?))
                     (dedupe))
                   (.lookup symspell input (key->verbosity verbosity) threshold
                            include-unknown?)))))
@@ -78,11 +93,12 @@
   (lookup-compound [_ input {:keys [threshold include-unknown?]
                              :or   {threshold        2
                                     include-unknown? false}}]
-    (doall
-      (map (fn [^SuggestItem si]
-             [(.getSuggestion si) (.getEditDistance si)])
-           (.lookupCompound symspell (s/lower-case input) threshold
-                            include-unknown?)))))
+    (let [capitalized? (Character/isUpperCase (first input))
+          all-cap?     (every? #(Character/isUpperCase %) input)
+          input        (s/lower-case input)]
+      (doall
+        (map (normalize-suggestion all-cap? capitalized?)
+             (.lookupCompound symspell input threshold include-unknown?))))))
 
 (defn- read-unigram
   [file]
@@ -112,7 +128,8 @@
    * `:max-edit-distance` is the maximum possible edit distance considered by
     this spell checker, default 2.
    * `:prefix-length` is the length of prefix considered by this spell checker,
-    default 10."
+    default 10.
+   * `:custom-dictionary` is a vector of additional words for the dictionary"
   ([]
    (new-spellchecker "en_unigrams.txt" "en_bigrams.txt" {}))
   ([unigram-file]
@@ -120,26 +137,28 @@
   ([unigram-file bigram-file]
    (new-spellchecker unigram-file bigram-file {}))
   ([unigram-file bigram-file {:keys [max-edit-distance
-                                     prefix-length]
+                                     prefix-length
+                                     custom-dictionary]
                               :or   {max-edit-distance 2
-                                     prefix-length     10}}]
+                                     prefix-length     10
+                                     custom-dictionary []}}]
    (let [unigram (read-unigram unigram-file)]
+     (doseq [w custom-dictionary]
+       (.put unigram w custom-word-default-freq))
      (->SpellChecker
        (SymSpell. unigram
                   (read-bigram bigram-file)
                   max-edit-distance
                   prefix-length)
-       (reduce add-to-trie {} (.keySet unigram))
-       unigram-file
-       bigram-file))))
+       (reduce add-to-trie {} (.keySet unigram))))))
 
 (comment
 
   (def sc (time (new-spellchecker)))
 
-  (count (time (lookup sc "xel")))
-  (count (time (lookup sc "xel" {:verbosity :all})))
-  (count (time (lookup sc "xel" {:verbosity :top})))
+  (count (time (lookup sc "xel," {:include-unknown? true})))
+  (count (time (lookup sc "xel" {:verbosity :all :include-unknown? true})))
+  (count (time (lookup sc "xel" {:verbosity :top :include-unknown? true})))
   (time (lookup-compound sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him"))
 
   (def sm (.-symspell sc))
