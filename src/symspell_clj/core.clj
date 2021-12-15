@@ -129,7 +129,8 @@
     this spell checker, default 2.
    * `:prefix-length` is the length of prefix considered by this spell checker,
     default 10.
-   * `:custom-dictionary` is a vector of additional words for the dictionary"
+   * `:custom-dictionary` is a vector of additional lower-cased words for
+    the dictionary."
   ([]
    (new-spellchecker "en_unigrams.txt" "en_bigrams.txt" {}))
   ([unigram-file]
