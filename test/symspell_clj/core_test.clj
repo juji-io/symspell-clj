@@ -46,4 +46,7 @@
 
 (deftest custom-dict-test
   (let [sc (sut/new-spellchecker nil nil {:custom-dictionary ["juji"]})]
-    (is (= (sut/lookup sc "juji") [["juji" 0]]))))
+    (is (= (sut/lookup sc "juji") [["juji" 0]])))
+  (let [sc (sut/new-spellchecker nil nil {:custom-dictionary ["Juji"]})]
+    (is (= (sut/lookup sc "juji") [["juji" 0]])))
+  )
