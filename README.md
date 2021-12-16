@@ -4,8 +4,6 @@ SymSpell spell checker in Clojure.
 
 This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSpell](https://github.com/wolfgarbe/SymSpell) spell checker.
 
-Currently it supports English only.
-
 ## Usage
 
 ```clojure
@@ -26,3 +24,7 @@ Currently it supports English only.
 ## Documentation
 
 Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.2.3/api/symspell-clj.core)
+
+## Status
+
+SymSpell is widely used and ported to many languages. This Clojure library is new, but is already used in production at [Juji](https://juji.io).  
