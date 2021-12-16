@@ -24,7 +24,7 @@
 (defprotocol ISpellChecker
   (add-word [this word]
     "Add a word to the spell checker at run time. It is responsibility of user
-     to persist the added words, pass them to `:customer-dictionary` when the
+     to persist the added words, pass them to `:custom-dictionary` when the
      spellchcker is initialized next time.")
   (match-prefix? [this input]
     "Return true if the input matches a prefix in the dictionary")
@@ -129,8 +129,7 @@
     this spell checker, default 2.
    * `:prefix-length` is the length of prefix considered by this spell checker,
     default 10.
-   * `:custom-dictionary` is a vector of additional lower-cased words for
-    the dictionary."
+   * `:custom-dictionary` is a vector of additional words for the dictionary."
   ([]
    (new-spellchecker "en_unigrams.txt" "en_bigrams.txt" {}))
   ([unigram-file]
@@ -147,7 +146,7 @@
          bigram-file  (or bigram-file "en_bigrams.txt")
          unigram      (read-unigram unigram-file)]
      (doseq [w custom-dictionary]
-       (.put unigram w custom-word-default-freq))
+       (.put unigram (s/lower-case w) custom-word-default-freq))
      (->SpellChecker
        (SymSpell. unigram
                   (read-bigram bigram-file)
