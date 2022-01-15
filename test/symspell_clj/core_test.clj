@@ -10,8 +10,8 @@
     (is (not (sut/match-prefix? sc "hwyi")))
 
     (is (sut/match-prefix? sc "x"))
-    (is (not (sut/match-prefix? sc "xw")))
-    (is (not (sut/match-prefix? sc "xww")))
+    (is (not (sut/match-prefix? sc "xg")))
+    (is (not (sut/match-prefix? sc "xgg")))
 
     (is (not (sut/match-prefix? sc "%")))
     (is (not (sut/match-prefix? sc "%a")))
@@ -21,11 +21,11 @@
   (let [sc (sut/new-spellchecker)]
     (is (= (sut/lookup sc "Hel") [["Hel" 0]]))
     (is (= (sut/lookup sc "Hel" {:verbosity :top}) [["Hel" 0]]))
-    (is (= (count (sut/lookup sc "Hel" {:verbosity :all})) 480))
+    (is (= (count (sut/lookup sc "Hel" {:verbosity :all})) 700))
 
-    (is (= (count (sut/lookup sc "xel")) 9))
-    (is (= (count (sut/lookup sc "xel" {:verbosity :all})) 334))
-    (is (= (take 9 (sut/lookup sc "xel" {:verbosity :top}))
+    (is (= (count (sut/lookup sc "xel")) 6))
+    (is (= (count (sut/lookup sc "xel" {:verbosity :all})) 495))
+    (is (= (take 6 (sut/lookup sc "xel" {:verbosity :top}))
            (sut/lookup sc "xel")))
 
     (is (= (sut/lookup sc "juji") [["fuji" 1]]))

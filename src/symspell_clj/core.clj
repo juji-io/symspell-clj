@@ -48,7 +48,7 @@
                               :closest Verbosity/CLOSEST
                               :top     Verbosity/TOP})
 
-(def ^:no-doc custom-word-default-freq 300000)
+(def ^:no-doc custom-word-default-freq 100000)
 
 (defn- normalize-suggestion
   [all-cap? capitalized?]
@@ -103,11 +103,25 @@
 (defn- read-unigram
   [file]
   (let [m (ConcurrentHashMap.)]
-    (with-open [rdr (io/reader (io/resource file))]
+    (with-open [rdr (io/reader (io/resource file))
+                ;; wrt (io/writer "new-unigram.txt")
+                ]
       (doseq [line (line-seq rdr)]
-        (let [[token freq] (s/split line #" ")]
-          (.put m (s/trim token) (Long/parseLong freq)))))
+        (let [[token freq] (s/split line #" ")
+              token        (s/trim token)]
+          (.put m token
+                (if freq (Long/parseLong freq) custom-word-default-freq))
+          ;; for creating new-unigram.txt
+          #_(when (re-matches #"^[a-zA-Z']+" token)
+              (when-not (.get m token)
+                (.write wrt token)
+                (when freq (.write wrt (str " " freq)))
+                (.write wrt "\n")
+                (.put m token
+                      (if freq (Long/parseLong freq) custom-word-default-freq)))))))
     m))
+
+;; (read-unigram "en_unigrams.txt")
 
 (defn- read-bigram
   [file]
