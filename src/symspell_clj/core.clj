@@ -203,6 +203,7 @@
 
   (def sc (time (new-spellchecker)))
 
+
   (count (time (lookup sc "xel," {:include-unknown? true})))
   (count (time (lookup sc "xel" {:verbosity :all :include-unknown? true})))
   (count (time (lookup sc "xel" {:verbosity :top :include-unknown? true})))
@@ -214,7 +215,7 @@
   (.size (.getBigramLexicon sm))
 
 
-  (get-suggestion sc "tom li-yang's hp0 got 123.")
+  (get-suggestion sc "chatbo")
 
 
   ;; (punc-split "boyan li-yang's hp0 123.")
