@@ -1,7 +1,7 @@
-(def version "0.2.4")
+(def version "0.3.0")
 
 (defproject org.clojars.huahaiy/symspell-clj version
-  :description "SymSpell in Clojure"
+  :description "SymSpell spell checker in Clojure"
   :url "https://github.com/juji-io/symspell-clj"
   :dependencies [[org.clojure/clojure "1.10.3" :scope "provided"]]
   :java-source-paths ["src/java"]

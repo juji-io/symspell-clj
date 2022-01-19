@@ -50,3 +50,12 @@
   (let [sc (sut/new-spellchecker nil nil {:custom-dictionary ["Juji"]})]
     (is (= (sut/lookup sc "juji") [["juji" 0]])))
   )
+
+
+(deftest get-suggestion-test
+  (let [sc (sut/new-spellchecker)]
+    (is (= (sut/get-suggestion sc "Wht is juji?") "What is fuji?"))
+    (is (= (sut/get-suggestion sc "OK!") "OK!"))
+    (is (= (sut/get-suggestion sc "Wht is tht?") "What is that?"))
+    (is (= (sut/get-suggestion sc "Tom li-yang's hp0 got 123.")
+           "Tom li-yang's hp0 got 123."))))

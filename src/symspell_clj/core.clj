@@ -29,8 +29,8 @@
   (match-prefix? [this input]
     "Return true if the input matches a prefix in the dictionary")
   (lookup [this input] [this input opts]
-    "Return suggested terms for a single word input. Possible option map keys
-     are:
+    "Return suggested terms for a single word input, along with the edit distance
+     for each. Possible option map keys are:
      * `:verbosity`, a keyword value, with possible values:
         - `:all`, return all possible suggestions
         - `:closest`, return the closest (w/ minimal edit distance) suggestions
@@ -39,10 +39,15 @@
        than `max-edit-distance` of the spell checker
      * `:include-unknown?`, whether to include unknown word in suggestion")
   (lookup-compound [this input] [this input opts]
-    "Return suggestions for multi-word input. Option may keys include:
+    "Return suggestions for multi-word input, along with the edit distance for each.
+     Option map keys may include:
      * `:threshold`, edit distance threshold per word, default is 2. This must be
        no larger than `max-edit-distance` of the spell checker
-     * `:include-unknown?`, whether to include unknown word in suggestion"))
+     * `:include-unknown?`, whether to include unknown word in suggestion")
+  (get-suggestion [this input]
+    "Return a single spell-checked input. This is a user level function that tries
+     to do the sensible things, such as preserving the cases, dealing with punctuation
+     and numbers."))
 
 (def ^:no-doc key->verbosity {:all     Verbosity/ALL
                               :closest Verbosity/CLOSEST
@@ -59,6 +64,22 @@
          capitalized? (s/capitalize suggestion)
          :else        suggestion))
      (.getEditDistance si)]))
+
+(defn- captialized-input? [input] (Character/isUpperCase (first input)))
+
+(defn- all-cap-input? [input] (every? #(Character/isUpperCase %) input))
+
+(defn- punc-split
+  [input]
+  (re-seq
+    #"[-;\\,\\!\"\\#\\$%\\&\\(\\)\\*\\+\\:\\/\\<\\.\\=\\>\\?@\\[\\]\\\\\\^_`\\{\\|\\}~]|[a-zA-Z0-9' ]+"
+    input) )
+
+(defn- non-word?
+  [input]
+  (re-find
+    #"[0-9-;\\,\\!\"\\#\\$%\\&\\(\\)\\*\\+\\:\\/\\<\\.\\=\\>\\?@\\[\\]\\\\\\^_`\\{\\|\\}~]"
+    input))
 
 (deftype SpellChecker [^SymSpell symspell
                        ^:volatile-mutable prefix-trie]
@@ -78,8 +99,8 @@
                     :or   {verbosity        :closest
                            threshold        2
                            include-unknown? false}}]
-    (let [capitalized? (Character/isUpperCase (first input))
-          all-cap?     (every? #(Character/isUpperCase %) input)
+    (let [capitalized? (captialized-input? input)
+          all-cap?     (all-cap-input? input)
           input        (s/lower-case input)]
       (doall
         (sequence (comp
@@ -93,12 +114,22 @@
   (lookup-compound [_ input {:keys [threshold include-unknown?]
                              :or   {threshold        2
                                     include-unknown? false}}]
-    (let [capitalized? (Character/isUpperCase (first input))
-          all-cap?     (every? #(Character/isUpperCase %) input)
+    (let [capitalized? (captialized-input? input)
+          all-cap?     (all-cap-input? input)
           input        (s/lower-case input)]
       (doall
         (map (normalize-suggestion all-cap? capitalized?)
-             (.lookupCompound symspell input threshold include-unknown?))))))
+             (.lookupCompound symspell input threshold include-unknown?)))))
+
+  (get-suggestion [this input]
+    (->> input
+         punc-split
+         (map (fn [s]
+                (if (non-word? s)
+                  s
+                  (ffirst (lookup-compound this s)))))
+         flatten
+         s/join)))
 
 (defn- read-unigram
   [file]
@@ -135,9 +166,9 @@
 (defn new-spellchecker
   "Create a spell checker.
    Unigram file is relative to the classpath. The file should be plain text,
-   UTF-8 encoded without BOM. Each line contains a word and its frequency with a
-   space in between. The default file is a built-in English dictionary.
-   Bigram file is similar, but with two words instead. This file is optional.
+   UTF-8 encoded without BOM. Each line contains a word and an optional frequency
+   with a space in between. The default file is a built-in English dictionary.
+   Bigram file is similar, but with two words instead, Bigram file is optional.
    Possible option map keys are
    * `:max-edit-distance` is the maximum possible edit distance considered by
     this spell checker, default 2.
@@ -181,6 +212,18 @@
   (.size (.getDeletes sm))
   (.size (.getUnigramLexicon sm))
   (.size (.getBigramLexicon sm))
+
+
+  (get-suggestion sc "tom li-yang's hp0 got 123.")
+
+
+  ;; (punc-split "boyan li-yang's hp0 123.")
+
+  (s/split "yang's hp0  123" #" ")
+
+
+  (lookup-compound sc "tom li")
+  (lookup sc "tom ")
 
 
 

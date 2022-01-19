@@ -13,6 +13,12 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 
 (def sc (sp/new-spellchecker))
 
+;; get a suggested corrected string, you probably want to use this for simple things
+(sp/get-suggestion sc "Wht is tht?")
+;;==> "What is that?"
+
+;; use functions below if you want to do your own thing
+
 ;; spell checking individual word, return suggestions and corresponding edit distances
 (sp/lookup sc "wht")
 ;;==> (["what" 1] ["whit" 1] ["whet" 1])
@@ -25,8 +31,8 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 
 ## Documentation
 
-Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.2.3/api/symspell-clj.core)
+Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.3.0/api/symspell-clj.core)
 
 ## Status
 
-SymSpell is widely used and ported to many languages. This Clojure library is new, but is already used in production at [Juji](https://juji.io).  
+SymSpell is widely used and ported to many languages. This Clojure library is new, but is already used in production at [Juji](https://juji.io).
