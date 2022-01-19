@@ -31,7 +31,7 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 
 ## Documentation
 
-Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.3.0/api/symspell-clj.core)
+Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.3.1/api/symspell-clj.core)
 
 ## Status
 
