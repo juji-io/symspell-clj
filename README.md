@@ -1,7 +1,7 @@
 # symspell-clj
 
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.huahaiy/symspell-clj.svg?color=success)](https://clojars.org/org.clojars.huahaiy/symspell-clj)
-[![cljdoc badge](https://cljdoc.org/badge/juji-io/symspell-clj)](https://cljdoc.org/d/juji-io/symspell-clj)
+[![cljdoc badge](https://cljdoc.org/badge/org.clojars.huahaiy/symspell-clj)](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj)
 
 
 SymSpell spell checker in Clojure.

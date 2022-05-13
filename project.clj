@@ -1,4 +1,4 @@
-(def version "0.4.2")
+(def version "0.4.3")
 
 (defproject org.clojars.huahaiy/symspell-clj version
   :description "SymSpell spell checker in Clojure"
