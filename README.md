@@ -14,10 +14,14 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 (def sc (sp/new-spellchecker))
 
 ;; get a suggested corrected string
+(sp/get-suggestion sc "Wht")
+;;==> "What"
+
+;; can do multiple words
 (sp/get-suggestion sc "Wht is tht?")
 ;;==> "What is that?"
 
-;; spell checking multiple words, this also does word segmentation
+;; also does word segmentation
 (sp/get-suggestion sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him")
 ;;==> "where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him"
 
