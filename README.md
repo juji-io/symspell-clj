@@ -13,25 +13,19 @@ This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSp
 
 (def sc (sp/new-spellchecker))
 
-;; get a suggested corrected string, you probably want to use this for simple things
+;; get a suggested corrected string
 (sp/get-suggestion sc "Wht is tht?")
 ;;==> "What is that?"
 
-;; use functions below if you want to do your own thing
-
-;; spell checking individual word, return suggestions and corresponding edit distances
-(sp/lookup sc "wht")
-;;==> (["what" 1] ["whit" 1] ["whet" 1])
-
 ;; spell checking multiple words, this also does word segmentation
-(sp/lookup-compound sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him")
-;;==> (["where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him" 10])
+(sp/get-suggestion sc "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him")
+;;==> "where is the love he had dated for much of the past who couldn't read in sixth grade and inspired him"
 
 ```
 
 ## Documentation
 
-Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.3.1/api/symspell-clj.core)
+Please see API documentation on [cljdoc](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj/0.0.4.0/api/symspell-clj.core)
 
 ## Status
 

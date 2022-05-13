@@ -55,31 +55,79 @@
 
 (def ^:no-doc custom-word-default-freq 100000)
 
-(defn- normalize-suggestion
-  [all-cap? capitalized?]
-  (fn [^SuggestItem si]
-    [(let [suggestion (.getSuggestion si)]
-       (cond
-         all-cap?     (s/upper-case suggestion)
-         capitalized? (s/capitalize suggestion)
-         :else        suggestion))
-     (.getEditDistance si)]))
-
-(defn- captialized-input? [input] (Character/isUpperCase (first input)))
-
-(defn- all-cap-input? [input] (every? #(Character/isUpperCase %) input))
-
 (defn- punc-split
   [input]
   (re-seq
     #"[-;\\,\\!\"\\#\\$%\\&\\(\\)\\*\\+\\:\\/\\<\\.\\=\\>\\?@\\[\\]\\\\\\^_`\\{\\|\\}~]|[a-zA-Z0-9' ]+"
     input) )
 
+(defn- email? [s] (re-find #"^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+$" s))
+
 (defn- non-word?
   [input]
   (re-find
     #"[0-9-;\\,\\!\"\\#\\$%\\&\\(\\)\\*\\+\\:\\/\\<\\.\\=\\>\\?@\\[\\]\\\\\\^_`\\{\\|\\}~]"
     input))
+
+(defn- breakup
+  "break up a consecutive seq of non-space characters into pieces, unless it
+  should be kept whole, e.g. email"
+  [s]
+  (cond
+    (email? s) [s]
+    :else      (punc-split s)))
+
+(defn- trim-space
+  "separate preceding and/or trailing space from the word"
+  [s]
+  (let [space-start? (s/starts-with? s " ")
+        space-end?   (s/ends-with? s " ")
+        len          (.length s)]
+    (cond
+      (= " " s)                     [s]
+      (and space-start? space-end?) [" " (subs s 1 (dec len)) " "]
+      space-start?                  [" " (subs s 1)]
+      space-end?                    [(subs s 0 (dec len)) " "]
+      :else                         [s])))
+
+(defn- split-parts
+  "Split input into parts that can be independently spell-checked, trying to
+  make each part as large as possible"
+  [input]
+  (into []
+        (comp (mapcat breakup)
+           (partition-by #(if (non-word? %) true false))
+           (map s/join)
+           (mapcat trim-space))
+        (s/split input #"((?<= )|(?= ))")))
+
+(defn- captialized-input? [input] (Character/isUpperCase (first input)))
+
+(defn- all-cap-input? [input] (every? #(Character/isUpperCase %) input))
+
+(defn- normalize-suggestion
+  [^SuggestItem si all-cap? capitalized?]
+  (let [suggestion (.getSuggestion si)]
+    (cond
+      all-cap?     (s/upper-case suggestion)
+      capitalized? (s/capitalize suggestion)
+      :else        suggestion)))
+
+(declare lookup lookup-compound)
+
+(defn- spell-check
+  [spell-checker input]
+  (cond
+    (= " " input)     input
+    (non-word? input) input
+    :else             (let [capitalized? (captialized-input? input)
+                            all-cap?     (all-cap-input? input)
+                            input        (s/lower-case input)]
+                        (normalize-suggestion
+                          (first (if (re-find #" " input)
+                                   (lookup-compound spell-checker input)
+                                   (lookup spell-checker input)))
+                          all-cap? capitalized?))))
 
 (deftype SpellChecker [^SymSpell symspell
                        ^:volatile-mutable prefix-trie]
@@ -99,35 +147,20 @@
                     :or   {verbosity        :closest
                            threshold        2
                            include-unknown? false}}]
-    (let [capitalized? (captialized-input? input)
-          all-cap?     (all-cap-input? input)
-          input        (s/lower-case input)]
-      (doall
-        (sequence (comp
-                    (map (normalize-suggestion all-cap? capitalized?))
-                    (dedupe))
-                  (.lookup symspell input (key->verbosity verbosity) threshold
-                           include-unknown?)))))
+    (.lookup symspell input (key->verbosity verbosity) threshold
+             include-unknown?))
 
   (lookup-compound [this input]
     (.lookup-compound this input {}))
   (lookup-compound [_ input {:keys [threshold include-unknown?]
                              :or   {threshold        2
                                     include-unknown? false}}]
-    (let [capitalized? (captialized-input? input)
-          all-cap?     (all-cap-input? input)
-          input        (s/lower-case input)]
-      (doall
-        (map (normalize-suggestion all-cap? capitalized?)
-             (.lookupCompound symspell input threshold include-unknown?)))))
+    (.lookupCompound symspell input threshold include-unknown?))
 
   (get-suggestion [this input]
     (->> input
-         punc-split
-         (map (fn [s]
-                (if (non-word? s)
-                  s
-                  (ffirst (lookup-compound this s)))))
+         split-parts
+         (map #(spell-check this %))
          flatten
          s/join)))
 
@@ -135,6 +168,7 @@
   [file]
   (let [m (ConcurrentHashMap.)]
     (with-open [rdr (io/reader (io/resource file))
+                ;; for creating new-unigram.txt
                 ;; wrt (io/writer "new-unigram.txt")
                 ]
       (doseq [line (line-seq rdr)]
@@ -203,6 +237,19 @@
 
   (def sc (time (new-spellchecker)))
 
+  (spell-check sc "wht")
+  (spell-check sc "Wht")
+  (spell-check sc "WHT")
+  (spell-check sc "WHT is it")
+  (spell-check sc
+               "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him")
+
+  (->> "Tom li-yang's hp0 got 123."
+       split-parts
+       (map #(spell-check sc %))
+       ;; flatten
+       ;; s/join
+       )
 
   (count (time (lookup sc "xel," {:include-unknown? true})))
   (count (time (lookup sc "xel" {:verbosity :all :include-unknown? true})))
@@ -214,17 +261,6 @@
   (.size (.getUnigramLexicon sm))
   (.size (.getBigramLexicon sm))
 
-
-  (get-suggestion sc "chatbo")
-
-
-  ;; (punc-split "boyan li-yang's hp0 123.")
-
-  (s/split "yang's hp0  123" #" ")
-
-
-  (lookup-compound sc "tom li")
-  (lookup sc "tom ")
 
 
 
