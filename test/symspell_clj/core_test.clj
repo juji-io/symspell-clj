@@ -42,5 +42,9 @@
              sc
              "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him"
              )))
-
-    ))
+    (is (= (sut/get-suggestion sc "") nil)
+        "empty string returns nil")
+    (is (= (sut/get-suggestion sc "      ") nil)
+        "blank string returns nil")
+    (is (= (sut/get-suggestion sc "nosuggestionforthis") nil)
+        "when no suggestion is found returns nil")))
