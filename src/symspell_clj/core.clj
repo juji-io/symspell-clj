@@ -95,10 +95,10 @@
   make each part as large as possible"
   [input]
   (eduction
-    (comp (mapcat breakup)
-          (partition-by #(if (non-word? %) true false))
-          (map s/join)
-          (mapcat trim-space))
+    (mapcat breakup)
+    (partition-by #(if (non-word? %) true false))
+    (map s/join)
+    (mapcat trim-space)
     (s/split input #"((?<= )|(?= ))")))
 
 (defn- captialized-input? [input] (Character/isUpperCase (first input)))
