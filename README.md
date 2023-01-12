@@ -4,9 +4,14 @@
 [![cljdoc badge](https://cljdoc.org/badge/org.clojars.huahaiy/symspell-clj)](https://cljdoc.org/d/org.clojars.huahaiy/symspell-clj)
 
 
-SymSpell spell checker in Clojure.
+SymSpell spell checker for Clojure.
 
-This is based on a [Java port](https://github.com/rxp90/jsymspell) of the [SymSpell](https://github.com/wolfgarbe/SymSpell) spell checker.
+SymSpell works by generating delete-only candidates and indexing them, so the
+searching and fuzzy matching are extremely fast.
+
+This is based on a [Java port](https://github.com/rxp90/jsymspell) of the
+[SymSpell](https://github.com/wolfgarbe/SymSpell) spell checker. A few
+convenient functions are also provided.
 
 ## Usage
 
