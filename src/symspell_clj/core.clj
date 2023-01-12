@@ -94,12 +94,12 @@
   "Split input into parts that can be independently spell-checked, trying to
   make each part as large as possible"
   [input]
-  (into []
-        (comp (mapcat breakup)
-           (partition-by #(if (non-word? %) true false))
-           (map s/join)
-           (mapcat trim-space))
-        (s/split input #"((?<= )|(?= ))")))
+  (eduction
+    (comp (mapcat breakup)
+          (partition-by #(if (non-word? %) true false))
+          (map s/join)
+          (mapcat trim-space))
+    (s/split input #"((?<= )|(?= ))")))
 
 (defn- captialized-input? [input] (Character/isUpperCase (first input)))
 
@@ -107,7 +107,7 @@
 
 (defn- normalize-suggestion
   [^SuggestItem si all-cap? capitalized?]
-  (let [suggestion (.getSuggestion si)]
+  (when-let [suggestion (-> si (.getSuggestion) not-empty)]
     (cond
       all-cap?     (s/upper-case suggestion)
       capitalized? (s/capitalize suggestion)
@@ -118,16 +118,18 @@
 (defn- spell-check
   [spell-checker input]
   (cond
-    (= " " input)     input
+    (= " " input) input
+    (s/blank? input) ""
     (non-word? input) input
-    :else             (let [capitalized? (captialized-input? input)
-                            all-cap?     (all-cap-input? input)
-                            input        (s/lower-case input)]
-                        (normalize-suggestion
-                          (first (if (re-find #" " input)
-                                   (lookup-compound spell-checker input)
-                                   (lookup spell-checker input)))
-                          all-cap? capitalized?))))
+    :else (let [capitalized? (captialized-input? input)
+                all-cap?     (all-cap-input? input)
+                input'       (s/lower-case input)
+                suggestion   (first
+                               (if (re-find #" " input')
+                                 (lookup-compound spell-checker input')
+                                 (lookup spell-checker input')))]
+            (when suggestion
+              (normalize-suggestion suggestion all-cap? capitalized?)))))
 
 (deftype SpellChecker [^SymSpell symspell
                        ^:volatile-mutable prefix-trie]
@@ -158,11 +160,10 @@
     (.lookupCompound symspell input threshold include-unknown?))
 
   (get-suggestion [this input]
-    (->> input
-         split-parts
-         (map #(spell-check this %))
-         flatten
-         s/join)))
+    (when-not (s/blank? input)
+      (transduce (keep #(spell-check this %))
+                 (completing str not-empty)
+                 (split-parts input)))))
 
 (defn- read-unigram
   [file]
@@ -237,12 +238,15 @@
 
   (def sc (time (new-spellchecker)))
 
+  (spell-check sc "")
   (spell-check sc "wht")
   (spell-check sc "Wht")
   (spell-check sc "WHT")
   (spell-check sc "WHT is it")
   (spell-check sc
                "whereis th elove hehad dated forImuch of thepast who couqdn'tread in sixtgrade and ins pired him")
+  (get-suggestion sc "")
+  (get-suggestion sc "nosuggestionforthis")
 
   (->> "Tom li-yang's hp0 got 123."
        split-parts
