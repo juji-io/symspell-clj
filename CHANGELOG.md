@@ -2,7 +2,7 @@
 
 ## 0.4.5
 ### Fixed
-- release java 8
+- release in java 11
 
 ## 0.4.4
 ### Fixed
